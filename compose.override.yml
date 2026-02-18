@@ -86,6 +86,87 @@ services:
       SMTP_PORT: "1025"
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "noreply@example.com"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+
+  # ---------------------------------------------------------------------------
+  # Redis — Celery broker + result backend
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: "no"
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Celery worker — all 3 Phase 1 agent queues in one process for local dev
+  # In production each agent type runs in its own auto-scaling worker fleet.
+  # ---------------------------------------------------------------------------
+  celery_worker:
+    restart: "no"
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command:
+      - celery
+      - -A
+      - app.celery_app
+      - worker
+      - --loglevel=info
+      - -Q
+      - agent1_keyword_miner,agent2_serp_discovery,agent3_domain_classifier
+      - --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+      POSTGRES_SERVER: "db"
+    develop:
+      watch:
+        - path: ./backend
+          action: sync
+          target: /app/backend
+          ignore:
+            - ./backend/.venv
+            - .venv
+        - path: ./backend/pyproject.toml
+          action: rebuild
+
+  # ---------------------------------------------------------------------------
+  # Celery Flower — task monitor UI (local dev only)
+  # http://localhost:5555
+  # ---------------------------------------------------------------------------
+  flower:
+    restart: "no"
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command:
+      - celery
+      - -A
+      - app.celery_app
+      - flower
+      - --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
 
   mailcatcher:
     image: schickling/mailcatcher
