@@ -120,7 +120,7 @@ services:
       - worker
       - --loglevel=info
       - -Q
-      - agent1_keyword_miner,agent2_serp_discovery,agent3_domain_classifier
+      - agent1_keyword_miner,agent2_serp_discovery,agent3_domain_classifier,agent4_seo_metrics,agent5_tech_stack,agent6_intent_scoring,agent7_change_detection
       - --concurrency=2
     depends_on:
       redis:

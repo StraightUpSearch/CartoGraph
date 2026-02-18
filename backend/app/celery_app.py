@@ -19,6 +19,10 @@ celery_app = Celery(
         "app.agents.agent1_keyword_miner",
         "app.agents.agent2_serp_discovery",
         "app.agents.agent3_domain_classifier",
+        "app.agents.agent4_seo_metrics",
+        "app.agents.agent5_tech_stack",
+        "app.agents.agent6_intent_scoring",
+        "app.agents.agent7_change_detection",
     ],
 )
 
@@ -33,6 +37,10 @@ celery_app.conf.update(
         "app.agents.agent1_keyword_miner.*": {"queue": "agent1_keyword_miner"},
         "app.agents.agent2_serp_discovery.*": {"queue": "agent2_serp_discovery"},
         "app.agents.agent3_domain_classifier.*": {"queue": "agent3_domain_classifier"},
+        "app.agents.agent4_seo_metrics.*": {"queue": "agent4_seo_metrics"},
+        "app.agents.agent5_tech_stack.*": {"queue": "agent5_tech_stack"},
+        "app.agents.agent6_intent_scoring.*": {"queue": "agent6_intent_scoring"},
+        "app.agents.agent7_change_detection.*": {"queue": "agent7_change_detection"},
     },
     # Retry policy
     task_acks_late=True,
