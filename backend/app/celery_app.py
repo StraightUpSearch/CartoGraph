@@ -23,6 +23,7 @@ celery_app = Celery(
         "app.agents.agent5_tech_stack",
         "app.agents.agent6_intent_scoring",
         "app.agents.agent7_change_detection",
+        "app.webhook_tasks",
     ],
 )
 
@@ -41,6 +42,7 @@ celery_app.conf.update(
         "app.agents.agent5_tech_stack.*": {"queue": "agent5_tech_stack"},
         "app.agents.agent6_intent_scoring.*": {"queue": "agent6_intent_scoring"},
         "app.agents.agent7_change_detection.*": {"queue": "agent7_change_detection"},
+        "app.webhook_tasks.*": {"queue": "webhook_delivery"},
     },
     # Retry policy
     task_acks_late=True,

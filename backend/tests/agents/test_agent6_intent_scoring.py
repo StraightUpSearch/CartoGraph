@@ -4,7 +4,6 @@ import json
 
 from app.agents.agent6_intent_scoring import (
     IntentScoringOutput,
-    _compute_trending_score,
     _modifier_density,
     _serp_feature_score,
     score_domain,

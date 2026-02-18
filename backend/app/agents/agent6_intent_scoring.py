@@ -69,14 +69,12 @@ class IntentScoringOutput(BaseModel):
 
 
 def _serp_feature_score(serp_features: dict[str, bool]) -> float:
-    """Compute weighted SERP feature contribution (max = highest single weight)."""
+    """Compute cumulative weighted SERP feature contribution."""
     total = 0.0
     for feature, present in serp_features.items():
         if present:
-            weight = SERP_FEATURE_WEIGHTS.get(feature, 0.0)
-            total += weight
-    # Cap at max single weight to prevent SERP from dominating
-    return min(total, max(SERP_FEATURE_WEIGHTS.values()))
+            total += SERP_FEATURE_WEIGHTS.get(feature, 0.0)
+    return total
 
 
 def _modifier_density(

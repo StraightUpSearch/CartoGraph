@@ -233,3 +233,136 @@ class DomainsPublic(SQLModel):
     data: list[DomainSummary]
     count: int
     page: int = 1
+    next_cursor: str | None = None  # cursor-pagination token
+
+
+# ---------------------------------------------------------------------------
+# Workspace — team/account container; owns tier + API token
+# ---------------------------------------------------------------------------
+
+
+class Workspace(SQLModel, table=True):
+    __tablename__ = "workspace"  # type: ignore[assignment]
+
+    workspace_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(max_length=255)
+    owner_id: uuid.UUID = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
+    tier: str = Field(default="free", max_length=20)
+    api_token_hash: str | None = Field(default=None, max_length=255)
+    api_token_prefix: str | None = Field(default=None, max_length=16)
+    # Monthly usage counters
+    domain_lookups_used: int = Field(default=0)
+    export_credits_used: int = Field(default=0)
+    api_calls_used: int = Field(default=0)
+    billing_cycle_start: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
+    )
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
+    )
+    updated_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
+    )
+    webhooks: list["WebhookEndpoint"] = Relationship(back_populates="workspace", cascade_delete=True)
+    alerts: list["Alert"] = Relationship(back_populates="workspace", cascade_delete=True)
+
+
+class WorkspaceCreate(SQLModel):
+    name: str = Field(max_length=255)
+
+
+class WorkspacePublic(SQLModel):
+    workspace_id: uuid.UUID
+    name: str
+    tier: str
+    api_token_prefix: str | None = None
+    domain_lookups_used: int
+    export_credits_used: int
+    api_calls_used: int
+    billing_cycle_start: datetime
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# WebhookEndpoint — user-configured delivery targets
+# ---------------------------------------------------------------------------
+
+
+class WebhookEndpoint(SQLModel, table=True):
+    __tablename__ = "webhook_endpoint"  # type: ignore[assignment]
+
+    webhook_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    workspace_id: uuid.UUID = Field(foreign_key="workspace.workspace_id", nullable=False, ondelete="CASCADE")
+    url: str = Field(max_length=2048)
+    secret: str = Field(max_length=255)  # HMAC-SHA256 signing secret
+    event_types: Any = Field(default=None, sa_column=Column(JSONB))  # list of event type strings
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
+    )
+    workspace: Workspace | None = Relationship(back_populates="webhooks")
+
+
+class WebhookCreate(SQLModel):
+    url: str = Field(max_length=2048)
+    event_types: list[str] = Field(default_factory=list)
+
+
+class WebhookPublic(SQLModel):
+    webhook_id: uuid.UUID
+    workspace_id: uuid.UUID
+    url: str
+    event_types: list[str] = Field(default_factory=list)
+    is_active: bool
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Alert — saved alert configurations
+# ---------------------------------------------------------------------------
+
+
+class Alert(SQLModel, table=True):
+    __tablename__ = "alert"  # type: ignore[assignment]
+
+    alert_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    workspace_id: uuid.UUID = Field(foreign_key="workspace.workspace_id", nullable=False, ondelete="CASCADE")
+    name: str = Field(max_length=255)
+    alert_type: str = Field(max_length=64)  # new_domain | tech_change | dr_change | serp_feature
+    filter_criteria: Any = Field(default=None, sa_column=Column(JSONB))
+    threshold: Any = Field(default=None, sa_column=Column(JSONB))
+    delivery: Any = Field(default=None, sa_column=Column(JSONB))  # {email, webhook_id, slack_url}
+    is_active: bool = Field(default=True)
+    last_triggered: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
+    )
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
+    )
+    workspace: Workspace | None = Relationship(back_populates="alerts")
+
+
+class AlertCreate(SQLModel):
+    name: str = Field(max_length=255)
+    alert_type: str = Field(max_length=64)
+    filter_criteria: dict[str, Any] | None = None
+    threshold: dict[str, Any] | None = None
+    delivery: dict[str, Any] | None = None
+
+
+class AlertPublic(SQLModel):
+    alert_id: uuid.UUID
+    workspace_id: uuid.UUID
+    name: str
+    alert_type: str
+    filter_criteria: dict[str, Any] | None = None
+    threshold: dict[str, Any] | None = None
+    is_active: bool
+    last_triggered: datetime | None = None
+    created_at: datetime
