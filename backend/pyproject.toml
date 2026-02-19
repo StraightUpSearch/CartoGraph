@@ -27,6 +27,8 @@ dependencies = [
     "playwright>=1.40.0",
     # Analytics database
     "clickhouse-connect>=0.7.0",
+    # Billing
+    "stripe>=7.0.0,<8.0.0",
 ]
 
 [dependency-groups]

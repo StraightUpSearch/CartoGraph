@@ -258,6 +258,13 @@ class Workspace(SQLModel, table=True):
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
     )
+    # Stripe billing
+    stripe_customer_id: str | None = Field(default=None, max_length=255)
+    stripe_subscription_id: str | None = Field(default=None, max_length=255)
+    stripe_subscription_status: str | None = Field(default=None, max_length=64)
+    stripe_price_id: str | None = Field(default=None, max_length=255)
+    founding_member: bool = Field(default=False)
+    # Timestamps
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore[call-arg]
@@ -283,6 +290,8 @@ class WorkspacePublic(SQLModel):
     export_credits_used: int
     api_calls_used: int
     billing_cycle_start: datetime
+    stripe_subscription_status: str | None = None
+    founding_member: bool = False
     created_at: datetime
 
 

@@ -3,18 +3,19 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { Copy, Globe, RotateCcw } from "lucide-react"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { Copy, CreditCard, ExternalLink, Globe, RotateCcw } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { WorkspacesService, type WorkspacePublic } from "@/client/cartograph"
+import { BillingService, WorkspacesService, type WorkspacePublic } from "@/client/cartograph"
 import { TierBadge } from "@/components/Common/TierBadge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -57,6 +58,75 @@ function UsageBar({
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Billing card
+// ---------------------------------------------------------------------------
+
+const TIER_LABELS: Record<string, string> = {
+  free: "Free",
+  starter: "Starter — £39/mo",
+  professional: "Professional — £119/mo",
+  business: "Business — £279/mo",
+  enterprise: "Enterprise",
+}
+
+function BillingCard({ workspace }: { workspace: WorkspacePublic }) {
+  const portalMutation = useMutation({
+    mutationFn: () => BillingService.getBillingPortal(),
+    onSuccess: (data) => {
+      window.location.href = data.url
+    },
+    onError: () => toast.error("Failed to open billing portal"),
+  })
+
+  const hasSubscription = !!workspace.stripe_subscription_status
+  const statusColour =
+    workspace.stripe_subscription_status === "active"
+      ? "text-green-600 dark:text-green-400"
+      : workspace.stripe_subscription_status === "past_due"
+        ? "text-red-600 dark:text-red-400"
+        : "text-muted-foreground"
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Subscription</CardTitle>
+        <CardDescription>
+          {TIER_LABELS[workspace.tier] ?? workspace.tier}
+          {workspace.stripe_subscription_status && (
+            <span className={`ml-2 text-xs font-medium capitalize ${statusColour}`}>
+              ({workspace.stripe_subscription_status.replace("_", " ")})
+            </span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardFooter className="flex flex-wrap gap-2">
+        {hasSubscription ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => portalMutation.mutate()}
+            disabled={portalMutation.isPending}
+          >
+            <CreditCard className="mr-1.5 h-4 w-4" />
+            {portalMutation.isPending ? "Opening…" : "Manage subscription"}
+            <ExternalLink className="ml-1.5 h-3 w-3 opacity-60" />
+          </Button>
+        ) : null}
+        <Button variant="default" size="sm" asChild>
+          <Link to="/pricing">
+            {workspace.tier === "free" ? "Upgrade plan" : "Change plan"}
+          </Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Workspace card
+// ---------------------------------------------------------------------------
 
 function WorkspaceCard({ workspace }: { workspace: WorkspacePublic }) {
   const queryClient = useQueryClient()
@@ -152,6 +222,9 @@ function WorkspaceCard({ workspace }: { workspace: WorkspacePublic }) {
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Billing */}
+      <BillingCard workspace={workspace} />
 
       {/* API token */}
       <Card>

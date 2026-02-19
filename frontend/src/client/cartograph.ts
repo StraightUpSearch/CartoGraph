@@ -368,6 +368,85 @@ export class AlertsService {
 }
 
 // ---------------------------------------------------------------------------
+// Billing types
+// ---------------------------------------------------------------------------
+
+export interface PlanLimits {
+  domain_lookups: number | null
+  rows_per_view: number | null
+  csv_credits: number | null
+  api_calls: number | null
+  alerts: number | null
+}
+
+export interface FoundingMemberInfo {
+  price_annual_gbp: number
+  stripe_price_id: string
+  cap: number
+  description: string
+}
+
+export interface Plan {
+  tier: string
+  name: string
+  price_monthly_gbp: number
+  price_annual_gbp: number | null
+  description: string
+  stripe_price_monthly?: string
+  stripe_price_annual?: string
+  limits: PlanLimits
+  highlights: string[]
+  founding_member?: FoundingMemberInfo
+}
+
+export interface FoundingMemberStatus {
+  count: number
+  cap: number
+  available: number
+}
+
+export interface PlansResponse {
+  plans: Plan[]
+  founding_member: FoundingMemberStatus
+}
+
+// ---------------------------------------------------------------------------
+// Billing service
+// ---------------------------------------------------------------------------
+
+export class BillingService {
+  public static getPlans(): CancelablePromise<PlansResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/billing/plans",
+      errors: { 422: "Validation Error" },
+    })
+  }
+
+  public static startCheckout(
+    priceId: string,
+  ): CancelablePromise<{ url: string }> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/billing/checkout/{price_id}",
+      path: { price_id: priceId },
+      errors: { 400: "Bad Request", 404: "Not Found", 409: "Conflict", 422: "Validation Error" },
+    })
+  }
+
+  public static getBillingPortal(
+    returnUrl?: string,
+  ): CancelablePromise<{ url: string }> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/billing/portal",
+      query: { return_url: returnUrl },
+      errors: { 400: "Bad Request", 404: "Not Found", 422: "Validation Error" },
+    })
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Webhooks service
 // ---------------------------------------------------------------------------
 

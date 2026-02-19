@@ -174,5 +174,56 @@ class CartoGraphSettings:
     SCHEMA_VERSION: str = "1.0.0"
     DEFAULT_COUNTRY: str = os.getenv("CARTOGRAPH_COUNTRY", "UK")
 
+    # ---------------------------------------------------------------------------
+    # Stripe billing
+    # ---------------------------------------------------------------------------
+
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+
+    # Monthly price IDs (set in Stripe dashboard)
+    STRIPE_PRICE_STARTER_MONTHLY: str = os.getenv("STRIPE_PRICE_STARTER_MONTHLY", "")
+    STRIPE_PRICE_PRO_MONTHLY: str = os.getenv("STRIPE_PRICE_PRO_MONTHLY", "")
+    STRIPE_PRICE_BUSINESS_MONTHLY: str = os.getenv("STRIPE_PRICE_BUSINESS_MONTHLY", "")
+    STRIPE_PRICE_ENTERPRISE_MONTHLY: str = os.getenv("STRIPE_PRICE_ENTERPRISE_MONTHLY", "")
+
+    # Annual price IDs (15–18% off monthly equivalent)
+    STRIPE_PRICE_STARTER_ANNUAL: str = os.getenv("STRIPE_PRICE_STARTER_ANNUAL", "")
+    STRIPE_PRICE_PRO_ANNUAL: str = os.getenv("STRIPE_PRICE_PRO_ANNUAL", "")
+    STRIPE_PRICE_BUSINESS_ANNUAL: str = os.getenv("STRIPE_PRICE_BUSINESS_ANNUAL", "")
+
+    # Founding Member programme — 50% off annual Professional, 200-seat cap
+    STRIPE_PRICE_PRO_FOUNDING: str = os.getenv("STRIPE_PRICE_PRO_FOUNDING", "")
+    FOUNDING_MEMBER_CAP: int = int(os.getenv("FOUNDING_MEMBER_CAP", "200"))
+
+    # App URLs for Stripe redirect
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5173")
+
 
 cg_settings = CartoGraphSettings()
+
+
+# ---------------------------------------------------------------------------
+# Derived lookup: Stripe price_id → internal tier string
+# (populated at import time from env; safe to call before Stripe SDK init)
+# ---------------------------------------------------------------------------
+
+
+def get_stripe_price_to_tier_map() -> dict[str, str]:
+    """Return a mapping of Stripe price IDs → workspace tier strings."""
+    mapping: dict[str, str] = {}
+    pairs: list[tuple[str, str]] = [
+        (cg_settings.STRIPE_PRICE_STARTER_MONTHLY, "starter"),
+        (cg_settings.STRIPE_PRICE_STARTER_ANNUAL, "starter"),
+        (cg_settings.STRIPE_PRICE_PRO_MONTHLY, "professional"),
+        (cg_settings.STRIPE_PRICE_PRO_ANNUAL, "professional"),
+        (cg_settings.STRIPE_PRICE_PRO_FOUNDING, "professional"),
+        (cg_settings.STRIPE_PRICE_BUSINESS_MONTHLY, "business"),
+        (cg_settings.STRIPE_PRICE_BUSINESS_ANNUAL, "business"),
+        (cg_settings.STRIPE_PRICE_ENTERPRISE_MONTHLY, "enterprise"),
+    ]
+    for price_id, tier in pairs:
+        if price_id:
+            mapping[price_id] = tier
+    return mapping
